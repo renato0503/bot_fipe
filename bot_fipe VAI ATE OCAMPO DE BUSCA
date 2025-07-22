@@ -1,0 +1,72 @@
+import time
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.action_chains import ActionChains
+
+# --- CONFIGURAÇÃO DO DRIVER ---
+chrome_options = webdriver.ChromeOptions()
+chrome_options.add_argument('--ignore-certificate-errors')
+chrome_options.add_argument('--ignore-ssl-errors')
+chrome_options.add_argument("start-maximized")
+driver = webdriver.Chrome(options=chrome_options)
+
+try:
+    # Passo 1: Abrir o site
+    print("Acessando o site da FIPE...")
+    driver.get("https://veiculos.fipe.org.br/")
+
+    # Passo 2: Clicar em "Consulta de Carros"
+    print("Clicando em 'Consulta de Carros e Utilitários Pequenos'...")
+    botao_carros = WebDriverWait(driver, 15).until(
+        EC.element_to_be_clickable((By.XPATH, "//div[normalize-space()='Consulta de Carros e Utilitários Pequenos']"))
+    )
+    botao_carros.click()
+    
+    # Pausa mais longa para garantir que a animação de abertura do painel termine completamente.
+    print("Aguardando o painel de pesquisa carregar...")
+    time.sleep(2) 
+
+    # --- A ABORDAGEM MAIS ROBUSTA E DEFINITIVA PARA O CLIQUE ---
+    
+    # 1. Localizamos o elemento que contém o texto "junho/2025".
+    # Este é o localizador mais preciso do elemento clicável.
+    xpath_container_mes = "//span[@id='select2-selectTabelaReferencia-container']"
+    print(f"Tentando encontrar o campo do mês com o XPath: {xpath_container_mes}")
+    container_mes = WebDriverWait(driver, 15).until(
+        EC.visibility_of_element_located((By.XPATH, xpath_container_mes))
+    )
+    print("Elemento do mês encontrado.")
+
+    # 2. Forçamos o scroll até o elemento para garantir que ele esteja 100% visível.
+    print("Rolando a tela até o elemento...")
+    driver.execute_script("arguments[0].scrollIntoView(true);", container_mes)
+    time.sleep(0.5) # Pequena pausa para o scroll assentar
+
+    # 3. Usamos ActionChains para simular um clique humano (mover e clicar).
+    print("Simulando um clique humano com ActionChains...")
+    actions = ActionChains(driver)
+    actions.move_to_element(container_mes).click().perform()
+    
+    # 4. VERIFICAÇÃO: Agora, esperamos que a lista de opções apareça como resultado do nosso clique.
+    # Se esta linha passar, o clique FUNCIONOU. Se der timeout, o clique falhou.
+    xpath_lista_de_meses = "//ul[contains(@class, 'select2-results__options')]"
+    print("Verificando se a lista de meses apareceu após o clique...")
+    WebDriverWait(driver, 10).until(
+        EC.visibility_of_element_located((By.XPATH, xpath_lista_de_meses))
+    )
+    
+    print("\nSUCESSO! O clique no campo do mês funcionou e a lista de opções está visível.")
+    print("O problema está resolvido. O próximo passo é selecionar 'maio/2025' da lista.")
+
+except Exception as e:
+    print(f"\nFALHA. Ocorreu um erro durante a tentativa de clique no mês: {e}")
+    driver.save_screenshot("erro_fipe_clique_final.png")
+    print("Screenshot 'erro_fipe_clique_final.png' salvo para análise.")
+
+finally:
+    print("Pausando por 10 segundos para você ver o resultado...")
+    time.sleep(10)
+    print("Fechando o navegador.")
+    driver.quit()
